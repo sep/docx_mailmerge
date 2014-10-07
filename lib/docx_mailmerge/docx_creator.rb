@@ -12,10 +12,10 @@ module DocxMailmerge
       File.open(file_name, 'wb') { |f| f.write(buffer) }
     end
 
-    def generate_docx_bytes(data)
+    def generate_docx_bytes(data, images = {})
       buffer = ''
       read_existing_template_docx do |template|
-        create_new_zip_in_memory(buffer, template, data)
+        create_new_zip_in_memory(buffer, template, data, images)
       end
       buffer
     end
@@ -30,13 +30,19 @@ module DocxMailmerge
 
     private
 
-    def copy_or_template(entry_name, f, data)
+    def copy_or_template(entry_name, f, data, images = {})
       # Inside the word document archive is one file with contents of the actual document. Modify it.
       if entry_name == 'word/document.xml'
         template_processor =  DocxMerge.new(f.read)
         template_processor.merge(data, @mark_missing_values)
       elsif entry_name == "word/settings.xml"
         remove_mailmerge_node(f.read)
+      elsif entry_name.include? "word/media"
+        if images.has_key? entry_name
+          images[entry_name].read
+        else
+          f.read
+        end
       else
         f.read
       end
@@ -54,13 +60,13 @@ module DocxMailmerge
       end
     end
 
-    def create_new_zip_in_memory(buffer, template, data)
+    def create_new_zip_in_memory(buffer, template, data, images = {})
       n_entries = template.num_files
       Zip::Archive.open_buffer(buffer, Zip::CREATE) do |archive|
         n_entries.times do |i|
           entry_name = template.get_name(i)
           template.fopen(entry_name) do |f|
-            archive.add_buffer(entry_name, copy_or_template(entry_name, f, data)) unless  entry_name == "word/_rels/settings.xml.rels"
+            archive.add_buffer(entry_name, copy_or_template(entry_name, f, data, images)) unless  entry_name == "word/_rels/settings.xml.rels"
           end
         end
       end
