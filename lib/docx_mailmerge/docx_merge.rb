@@ -46,7 +46,7 @@ module DocxMailmerge
     def simple_merge(data, mark_missing_values)
       simple_merge_nodes.each do |simple_node|
         ft = field_text(data, mark_missing_values, simple_node["w:instr"])
-        simple_node.search(".//w:t").first.content = ft
+        simple_node.search(".//w:t").first.inner_html = ft
         simple_node.replace(simple_node.children)
       end
     end
@@ -60,7 +60,7 @@ module DocxMailmerge
         complex_node.parent.next_element.remove
 
         text_node = complex_node.parent.next_element
-        text_node.search(".//w:t").first.content = field_text(data, mark_missing_values, complex_node.content)
+        text_node.search(".//w:t").first.inner_html = field_text(data, mark_missing_values, complex_node.content)
 
         # end tag and potientally more extra junk
         search_result = ""
